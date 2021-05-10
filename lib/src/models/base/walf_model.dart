@@ -1,5 +1,3 @@
-import 'package:walf/src/models/walf_string.dart';
-
 abstract class WalfModel {
   late final dynamic value;
   late final String key;

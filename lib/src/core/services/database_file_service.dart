@@ -25,20 +25,22 @@ class DatabaseFileService {
 
   Future<String> getLine(File file, int index) async {
     List<String> lines = await file.readAsLines();
-    print(lines);
     return lines[index];
   }
 
-  Future<bool> createNewFile(String fileName) async {
+  Future<bool> createNewFile(String fileName, String password) async {
     String? directory = await _getDirectoryPath();
-    print(directory);
     File file = File(directory! + "/" + fileName + ".wfdb");
     await file.create(recursive: true);
-    String password = getRandomString(16);
+    String secretKey = getRandomString(16);
     await writeFileContent(
       fileName,
-      EncodingDecodingService.walfJsonEncode({}, password),
-      password,
+      EncodingDecodingService.walfJsonEncode({
+        "package_author": "Mustafa Berat Kurt",
+        "info":
+            "Walf is a secure and fast key-value based database based on JSON. It uses AES-256 CBC encryption algorithm for Walf security."
+      }, secretKey, password),
+      secretKey,
     );
     return file.exists();
   }
@@ -49,9 +51,7 @@ class DatabaseFileService {
 
   Future<String> getFileContent(File file) async {
     List<String> lines = await file.readAsLines();
-    print(lines.length);
     lines.removeAt(0);
-    print(lines.length);
     String line = "";
     lines.forEach((element) {
       line = line + element;
@@ -64,10 +64,14 @@ class DatabaseFileService {
     return File(directory! + "/" + fileName + ".wfdb").exists();
   }
 
-  Future<void> writeFileContent(
-      String fileName, String content, String password) async {
-    print(password + "\n" + content);
+  Future<void> fileClean(String fileName) async {
     await File((await _getDirectoryPath())! + "/$fileName" + ".wfdb")
-        .writeAsString(password + "\n" + content, mode: FileMode.writeOnly);
+        .writeAsString("", mode: FileMode.writeOnly);
+  }
+
+  Future<void> writeFileContent(
+      String fileName, String content, String secretKey) async {
+    await File((await _getDirectoryPath())! + "/$fileName" + ".wfdb")
+        .writeAsString(secretKey + "\n" + content, mode: FileMode.writeOnly);
   }
 }

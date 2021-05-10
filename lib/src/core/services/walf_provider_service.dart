@@ -5,24 +5,24 @@ import 'package:walf/src/core/services/encryption_services/encoding_decoding_ser
 import 'package:walf/src/logger/walf_logger.dart';
 
 class WalfProviderService {
-  File? _databaseFile;
   DatabaseFileService _databaseFileService = DatabaseFileService();
 
-  Future<String> _getPassword(File file) async {
+  Future<String> _getSecretKey(File file) async {
     return _databaseFileService.getLine(file, 0);
   }
 
-  Future<Map<String, dynamic>> getAllData(String database) async {
+  Future<Map<String, dynamic>> getAllData(
+      String database, String password) async {
     var file = await _databaseFileService.getFile(database);
     String content = await _databaseFileService.getFileContent(file);
-    String password = await _getPassword(file);
-    return EncodingDecodingService.walfJsonDecode(content, password);
+    String secretKey = await _getSecretKey(file);
+    return EncodingDecodingService.walfJsonDecode(content, secretKey, password);
   }
 
-  Future<void> initDatabase(String databaseName) async {
+  Future<void> initDatabase(String databaseName, String password) async {
     WalfLogger.initialize();
-    _databaseFile = await _databaseFileService.getFile(databaseName);
-    var data = getAllData(databaseName);
+
+    var data = getAllData(databaseName, password);
     WalfLogger.nullLog(
         data, "Walf Database Data is null. Please first create new database.");
   }
@@ -31,9 +31,9 @@ class WalfProviderService {
     return await _databaseFileService.existDatabase(databaseName);
   }
 
-  Future<void> createNewDatabase(String databaseName) async {
-    bool created = await _databaseFileService.createNewFile(databaseName);
-    print(created);
+  Future<void> createNewDatabase(String databaseName, String password) async {
+    bool created =
+        await _databaseFileService.createNewFile(databaseName, password);
     if (created) {
       WalfLogger.fine(databaseName + " Database Created.");
     } else {
@@ -41,28 +41,31 @@ class WalfProviderService {
     }
   }
 
-  Future<void> updateData(
-      String databaseName, String key, dynamic newValue) async {
-    Map<String, dynamic> data = await getAllData(databaseName);
+  Future<void> updateData(String databaseName, String password, String key,
+      dynamic newValue) async {
+    Map<String, dynamic> data = await getAllData(databaseName, password);
     data[key] = newValue;
     var file = await _databaseFileService.getFile(databaseName);
-    String password = await _getPassword(file);
+    String secretKey = await _getSecretKey(file);
+    _databaseFileService.fileClean(databaseName);
     _databaseFileService.writeFileContent(
       databaseName,
-      EncodingDecodingService.walfJsonEncode(data, password),
-      password,
+      EncodingDecodingService.walfJsonEncode(data, secretKey, password),
+      secretKey,
     );
   }
 
-  Future<void> removeData(String databaseName, String key) async {
-    Map<String, dynamic> data = await getAllData(databaseName);
+  Future<void> removeData(String databaseName, String key, String pass) async {
+    Map<String, dynamic> data = await getAllData(databaseName, pass);
     var file = await _databaseFileService.getFile(databaseName);
-    String password = await _getPassword(file);
+    String secretKey = await _getSecretKey(file);
     data.remove(key);
+    _databaseFileService.fileClean(databaseName);
+
     _databaseFileService.writeFileContent(
       databaseName,
-      EncodingDecodingService.walfJsonEncode(data, password),
-      password,
+      EncodingDecodingService.walfJsonEncode(data, secretKey, pass),
+      secretKey,
     );
   }
 }
