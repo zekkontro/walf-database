@@ -1,27 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:walf/walf.dart';
-import 'package:walf/src/models/walf_string.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (await Permission.storage.isDenied) {
     Permission.storage.request();
   }
-  initWalfDatabase();
   runApp(MyApp());
-}
-
-String databaseName = "beratdatabase";
-late WalfDatabase database;
-initWalfDatabase() async {
-  database = WalfDatabase(databaseName);
-
-  if (!(await database.existDatabase(databaseName))) {
-    database.createDatabase(databaseName);
-  } else {
-    database.initDatabase();
-  }
 }
 
 class MyApp extends StatefulWidget {
@@ -30,8 +16,21 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  String databaseName = "beratdatabase";
+  static const String databasePass =
+      "rX59jDdeAtBd9Oi24NupVhW1eatUgPC9"; // Must be 32 characters long
+  WalfDatabase database = WalfDatabase("beratdatabase", password: databasePass);
+  TextEditingController keyController = TextEditingController();
+  TextEditingController valueController = TextEditingController();
+  initWalfDatabase() async {
+    if (!(await database.existDatabase())) {
+      await database.createDatabase();
+    }
+  }
+
   @override
   void initState() {
+    initWalfDatabase();
     super.initState();
   }
 
@@ -45,26 +44,38 @@ class _MyAppState extends State<MyApp> {
         body: Center(
           child: Column(
             children: [
-              StreamBuilder<WalfString>(
-                  stream: database.getString("key").asStream(),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 30),
+                child: TextField(
+                  controller: keyController,
+                  decoration: InputDecoration(hintText: "Enter key"),
+                ),
+              ),
+              SizedBox(
+                height: 30,
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 30),
+                child: TextField(
+                  controller: valueController,
+                  decoration: InputDecoration(hintText: "Enter value"),
+                ),
+              ),
+              SizedBox(
+                height: 30,
+              ),
+              TextButton(
+                  onPressed: () {
+                    database.setBool(keyController.text,
+                        valueController.text.toLowerCase() == "true");
+                    setState(() {});
+                    // setState(() {});
+                  },
+                  child: Text("ENTER DATA")),
+              StreamBuilder<WalfBool>(
+                  stream: database.getBool(keyController.text).asStream(),
                   builder: (context, snapshot) {
-                    return Column(
-                      children: [
-                        Text(snapshot.data!.value.toString()),
-                        TextButton(
-                            onPressed: () {
-                              database.setString("key", "Mustafa Berat Kurt");
-                              setState(() {});
-                            },
-                            child: Text("INCREASE")),
-                        TextButton(
-                            onPressed: () {
-                              database.removeData("key");
-                              setState(() {});
-                            },
-                            child: Text("REMOVE")),
-                      ],
-                    );
+                    return Text(snapshot.data!.value.toString());
                   }),
             ],
           ),
